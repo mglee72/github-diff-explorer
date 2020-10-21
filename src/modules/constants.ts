@@ -13,6 +13,7 @@ export const styleClass = {
   loader: 'gde__loader',
   fileIcon: 'gde__file-icon',
   caretIcon: 'gde__caret-icon',
+  filterIcon: 'gde__filter-icon',
   pageContainer: 'gde__page',
   activeFile: 'gde__file--active',
   activeExplorer: 'gde__item--active',
@@ -34,5 +35,7 @@ export const styleClass = {
   fileDiff: 'gde__file',  
   explorerFolderContainer: 'gde__nested-files',
   explorerFolderTopContainer: 'gde__nested-files-container',
+  explorerFilterContainer: 'gde__filter',
+  explorerFilterTopContainer: 'gde__filter-container',
   closedFolder: 'gde__folder-closed'
 }

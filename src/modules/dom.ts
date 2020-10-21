@@ -233,3 +233,23 @@ export function getExplorerItemElementWithName(name: string): HTMLSpanElement {
 
   return el
 }
+
+// TODO customize
+export function getExplorerFilterElementWithName(name: string): HTMLSpanElement {
+  const el = document.createElement('span')
+  el.classList.add(styleClass.explorerItem)
+
+  let innerFileEl = document.createElement('span')
+  innerFileEl.classList.add(styleClass.icon, styleClass.fileIcon)
+  innerFileEl = removeElementChildren(innerFileEl)
+  innerFileEl.appendChild(icons.funnel())
+
+  const nameEl = document.createElement('span')
+  nameEl.innerText = name
+
+  const clearedEl = removeElementChildren(el)
+  clearedEl.appendChild(innerFileEl)
+  clearedEl.appendChild(nameEl)
+
+  return el
+}

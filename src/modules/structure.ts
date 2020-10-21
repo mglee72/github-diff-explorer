@@ -29,6 +29,15 @@ export interface MappedFileElement {
 }
 
 /**
+ * Filter construct.
+ */
+export interface FilePathFilter {
+  name: string,
+  explorerFilterEl: HTMLElement,
+  contains(path: string): boolean
+}
+
+/**
  * Decorated file element which lifts up the dataset attributes for the
  * anchor and path of the file in question
  */

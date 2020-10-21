@@ -8,9 +8,16 @@ import {
   getFilesContainerElement,
   addEachFileToContainer,
   prepareEmptyDiffViewerElement,
-  setupPageStructure
+  setupPageStructure,
+  getExplorerFilterElementWithName
 } from './dom'
-import { extractPathDataFromElements, DecoratedFileElement, MappedFileElement, ExplorerDataMap } from './structure'
+import {
+  extractPathDataFromElements,
+  DecoratedFileElement,
+  MappedFileElement,
+  ExplorerDataMap,
+  FilePathFilter
+} from './structure'
 import { getReversedPathFragments, isValidHrefPath, checkIfValidAnchor, checkIfHashContainsAnchor } from './paths'
 import { onContentReady, onFilesLoaded, onLocationCheck } from './handlers'
 import { Logger } from './logger'
@@ -26,6 +33,10 @@ export class Extension {
   private _activeFileEl: HTMLElement | null
   private _activeExplorerFileEl: HTMLElement | null
 
+  private _selectedFilePaths: Set<string>
+  private _filters: FilePathFilter[]
+  private _selectedFilters: Set<string>
+
   private _isExplorerParsing: boolean
   private _explorerData: ExplorerDataMap
   private _currentHref: string
@@ -34,6 +45,10 @@ export class Extension {
     this._loadingEl = null
     this._activeFileEl = null
     this._activeExplorerFileEl = null
+
+    this._selectedFilePaths = new Set()
+    this._filters = []
+    this._selectedFilters = new Set()
     
     this._isExplorerParsing = false
     this._explorerData = {}
@@ -133,6 +148,7 @@ export class Extension {
    */
   buildFileExplorer(): void {
     this.parseFileExplorerData()
+    this.constructFilters()
 
     // The explorer element is the file explorer located
     // to the left of the viewer.
@@ -144,7 +160,18 @@ export class Extension {
     nestedFolderElContainer.classList.add(styleClass.explorerFolderTopContainer)
     nestedFolderElContainer.appendChild(nestedFolderEl)
 
+    const filterElContainer = document.createElement('div')
+    filterElContainer.classList.add(styleClass.explorerFilterTopContainer)
+
+    this._filters.forEach((filter, idx) => {
+      const filterEl = document.createElement('ul')
+      filterEl.classList.add(styleClass.explorerFilterContainer)
+      filterEl.appendChild(filter.explorerFilterEl)
+      filterElContainer.appendChild(filterEl)
+    })
+
     explorerContainerEl.appendChild(explorerHeaderEl)
+    explorerContainerEl.appendChild(filterElContainer)
     explorerContainerEl.appendChild(nestedFolderElContainer)
 
     // The diff viewer is the container which has both the file
@@ -168,6 +195,7 @@ export class Extension {
     setTimeout(() => {
       Logger.log('[buildFileExplorer] File explorer is complete: ', diffViewerEl)
       this._isExplorerParsing = false
+      this.updateActiveFileElements()
 
       // clearTimeout(loadingTimeout);
       // this.cleanup_LoadingEl();
@@ -200,6 +228,35 @@ export class Extension {
       
     this._explorerData = deepExtendHtmlTerminated({}, ...nestedPathData)
     Logger.log('[parseFileExplorerData] Path data nested as object: ', mappedFileEls)
+  }
+
+  constructFilters(): void {
+    const yamlFilter: FilePathFilter = {
+      explorerFilterEl: getExplorerFilterElementWithName("YAML"),
+      name: "YAML",
+      contains(path: string): boolean {
+        return path.endsWith(".yaml");
+      }
+    }
+    const nonYamlFilter: FilePathFilter = {
+      explorerFilterEl: getExplorerFilterElementWithName("Non-YAMLs"),
+      name: "Non-YAML",
+      contains(path: string): boolean {
+        return !path.endsWith(".yaml");
+      }
+    }
+    this._filters = [
+        yamlFilter,
+        nonYamlFilter
+    ]
+
+    this._filters.forEach((filter) => {
+      filter.explorerFilterEl.addEventListener('click', () => {
+        this.toggleFilter(filter)
+        this.updateActiveFileElements()
+      })
+    })
+    Logger.log('[constructFilters] Filters constructed: ', this._filters)
   }
 
   addDecoratedFileEventListeners(files: DecoratedFileElement[]): MappedFileElement[] {
@@ -240,13 +297,13 @@ export class Extension {
       })
 
       // Set first pass data for active file
-      const isValidAnchor = checkIfValidAnchor()
+      const isValidAnchor = checkIfValidAnchor() // Link contains which file to view.
 
       // TODO: Ensure returning to correctly deep linked elements, as this doesn't
       // always work in the current format
-      if (!isValidAnchor && index === 0)
+      if (!isValidAnchor && index === 0) {
         this.setActiveFile(mappedFile)
-      else if (isValidAnchor) {
+      } else if (isValidAnchor) {
         const hashContainsAnchor = checkIfHashContainsAnchor(file.anchor)
 
         if (hashContainsAnchor) {
@@ -256,28 +313,87 @@ export class Extension {
 
       // Set listener for future active file changes
       mappedFile.explorerFileEl.addEventListener('click', () => {
-        this.clearActiveFile()
-        this.setActiveFile(mappedFile)
+        // this.clearActiveFile()
+        // this.setActiveFile(mappedFile)
+        this.toggleActiveFile(mappedFile)
+        this.updateActiveFileElements()
       })
 
       return mappedFile
     })
   }
 
-  setActiveFile(file: MappedFileElement): void {
-    this._activeFileEl = file.rootFileEl
-    this._activeExplorerFileEl = file.explorerFileEl
-
-    this._activeFileEl.classList.add(styleClass.activeFile)
-    this._activeExplorerFileEl.classList.add(styleClass.activeExplorer)
+  toggleActiveFile(file: MappedFileElement): void {
+    if (this._selectedFilePaths.has(file.path)) {
+      this._selectedFilePaths.delete(file.path)
+    } else {
+      this._selectedFilePaths.add(file.path)
+    }
   }
 
-  clearActiveFile(): void {
-    this._activeFileEl?.classList.remove(styleClass.activeFile)
-    this._activeExplorerFileEl?.classList.remove(styleClass.activeExplorer)
+  setActiveFile(file: MappedFileElement): void {
+    this._selectedFilters.clear()
+    this._selectedFilePaths.clear()
+    this._selectedFilePaths.add(file.path)
+  }
 
-    this._activeFileEl = null
-    this._activeExplorerFileEl = null
+  toggleFilter(filter: FilePathFilter): void {
+    Logger.log("FILTER SELECTED", filter)
+    if (this._selectedFilters.has(filter.name)) {
+      this._selectedFilters.delete(filter.name)
+    } else {
+      this._selectedFilters.add(filter.name)
+    }
+    this.updateSelectedFilesBasedOnFilters()
+  }
+
+  updateSelectedFilesBasedOnFilters(): void {
+    const appliedFilters = this._filters.filter((filter) => {
+      return this._selectedFilters.has(filter.name)
+    })
+
+    this._mappedFileEls.forEach((fileEl) => {
+      const shouldDisplay = appliedFilters.some((filter) => {
+        return filter.contains(fileEl.path)
+      })
+      if (shouldDisplay) {
+        this._selectedFilePaths.add(fileEl.path)
+      } else {
+        this._selectedFilePaths.delete(fileEl.path)
+      }
+    })
+  }
+
+  selectFileEl(fileEl: MappedFileElement): void {
+    if (!fileEl.rootFileEl.classList.contains(styleClass.activeFile)) {
+      fileEl.rootFileEl.classList.add(styleClass.activeFile)
+    }
+    if (!fileEl.explorerFileEl.classList.contains(styleClass.activeExplorer)) {
+      fileEl.explorerFileEl.classList.add(styleClass.activeExplorer)
+    }
+  }
+
+  deselectFileEl(fileEl: MappedFileElement): void {
+    if (fileEl.rootFileEl.classList.contains(styleClass.activeFile)) {
+      fileEl.rootFileEl.classList.remove(styleClass.activeFile)
+    }
+    if (fileEl.explorerFileEl.classList.contains(styleClass.activeExplorer)) {
+      fileEl.explorerFileEl.classList.remove(styleClass.activeExplorer)
+    }
+  }
+
+  isFileSelected(path: string): boolean {
+    return this._selectedFilePaths.has(path)
+  }
+
+  updateActiveFileElements(): void {
+    this._mappedFileEls.forEach( (el, idx) => {
+      if (this.isFileSelected(el.path)) {
+        this.selectFileEl(el)
+      } else {
+        this.deselectFileEl(el)
+      }
+    })
   }
 
   updateViewedFileStatus(file: MappedFileElement): void {
