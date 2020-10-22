@@ -1,5 +1,5 @@
 {
-  "name": "github-diff-explorer",
+  "name": "github-diff-explorer-dev",
   "version": "1.2.3",
   "description": "The GitHub Diff Explorer is a Chrome extension which generates a seamless file explorer with a minimalist focus.",
   "main": "index.js",
@@ -44,7 +44,7 @@
   "homepage": "https://github.com/alexmdodge/github-diff-explorer#readme",
   "config": {
     "name": {
-      "extension": "GitHub Diff Explorer",
+      "extension": "GitHub Diff Explorer (Dev)",
       "script": "gde_script",
       "style": "gde_styles"
     },
