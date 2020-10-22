@@ -196,6 +196,8 @@ export class Extension {
     setTimeout(() => {
       Logger.log('[buildFileExplorer] File explorer is complete: ', diffViewerEl)
       this._isExplorerParsing = false
+      this.selectDefaultFilters()
+      this.updateSelectedFilesBasedOnFilters()
       this.updateActiveFileElements()
 
       // clearTimeout(loadingTimeout);
@@ -232,23 +234,23 @@ export class Extension {
   }
 
   constructFilters(): void {
-    const yamlFilter: FilePathFilter = {
-      explorerFilterEl: getExplorerFilterElementWithName("YAMLs"),
-      name: "YAMLs",
+    const nonZzzFilter: FilePathFilter = {
+      explorerFilterEl: getExplorerFilterElementWithName("Non-ZZZ Files"),
+      name: "Non-ZZZ Files",
       contains(path: string): boolean {
-        return path.endsWith(".yaml");
+        return !path.includes("zzz")
       }
     }
-    const nonYamlFilter: FilePathFilter = {
-      explorerFilterEl: getExplorerFilterElementWithName("Non-YAMLs"),
-      name: "Non-YAMLs",
+    const zzzFilter: FilePathFilter = {
+      explorerFilterEl: getExplorerFilterElementWithName("ZZZ Files"),
+      name: "ZZZ Files",
       contains(path: string): boolean {
-        return !path.endsWith(".yaml");
+        return path.includes("zzz")
       }
     }
     this._filters = [
-        yamlFilter,
-        nonYamlFilter
+        nonZzzFilter,
+        zzzFilter
     ]
 
     this._filters.forEach((filter) => {
@@ -346,6 +348,13 @@ export class Extension {
       this._selectedFilters.add(filter.name)
     }
     this.updateSelectedFilesBasedOnFilters()
+  }
+
+  selectDefaultFilters(): void {
+    const nonYamlFilter = this._filters.find((filter) => filter.name == "Non-ZZZ Files")
+    if (nonYamlFilter) {
+      this._selectedFilters.add(nonYamlFilter.name)
+    }
   }
 
   updateSelectedFilesBasedOnFilters(): void {
