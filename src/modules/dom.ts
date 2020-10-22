@@ -240,7 +240,7 @@ export function getExplorerFilterElementWithName(name: string): HTMLSpanElement 
   el.classList.add(styleClass.explorerItem)
 
   let innerFileEl = document.createElement('span')
-  innerFileEl.classList.add(styleClass.icon, styleClass.fileIcon)
+  innerFileEl.classList.add(styleClass.icon, styleClass.filterIcon)
   innerFileEl = removeElementChildren(innerFileEl)
   innerFileEl.appendChild(icons.funnel())
 

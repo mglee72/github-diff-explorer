@@ -222,6 +222,10 @@
   fill: rgba(0,0,0,0.5);
 }
 
+.gde__item:hover > .gde__filter-icon > svg {
+  fill: rgba(0,0,0,0.5);
+}
+
 .gde__item--active {
   font-weight: bold;
   color: #4cce66;
@@ -232,6 +236,14 @@
 }
 
 .gde__item--active:hover > .gde__file-icon > svg {
+  fill: #36BC53;
+}
+
+.gde__item--active > .gde__filter-icon > svg {
+  fill: #4cce66;
+}
+
+.gde__item--active:hover > .gde__filter-icon > svg {
   fill: #36BC53;
 }
 
@@ -264,6 +276,10 @@
 }
 
 .gde__file-icon > svg {
+  height: 14px;
+}
+
+.gde__filter-icon > svg {
   height: 14px;
 }
 

@@ -9,7 +9,7 @@ import {
   addEachFileToContainer,
   prepareEmptyDiffViewerElement,
   setupPageStructure,
-  getExplorerFilterElementWithName
+  getExplorerFilterElementWithName, getLoadingElement
 } from './dom'
 import {
   extractPathDataFromElements,
@@ -121,11 +121,12 @@ export class Extension {
   handleContentReady(): void {
     this._isExplorerParsing = true
 
-    // this._loadingEl = get_LoadingElement();
-    // document.querySelector('body').appendChild(this._loadingEl);
+    this._loadingEl = getLoadingElement()
+    document.querySelector('body')?.appendChild(this._loadingEl)
 
     onFilesLoaded()
       .then(files => this.handleFilesLoaded(files))
+      .then(() => this.cleanupLoadingEl())
       .catch(error => {
         Logger.error(error)
       })
@@ -163,7 +164,7 @@ export class Extension {
     const filterElContainer = document.createElement('div')
     filterElContainer.classList.add(styleClass.explorerFilterTopContainer)
 
-    this._filters.forEach((filter, idx) => {
+    this._filters.forEach((filter) => {
       const filterEl = document.createElement('ul')
       filterEl.classList.add(styleClass.explorerFilterContainer)
       filterEl.appendChild(filter.explorerFilterEl)
@@ -232,15 +233,15 @@ export class Extension {
 
   constructFilters(): void {
     const yamlFilter: FilePathFilter = {
-      explorerFilterEl: getExplorerFilterElementWithName("YAML"),
-      name: "YAML",
+      explorerFilterEl: getExplorerFilterElementWithName("YAMLs"),
+      name: "YAMLs",
       contains(path: string): boolean {
         return path.endsWith(".yaml");
       }
     }
     const nonYamlFilter: FilePathFilter = {
       explorerFilterEl: getExplorerFilterElementWithName("Non-YAMLs"),
-      name: "Non-YAML",
+      name: "Non-YAMLs",
       contains(path: string): boolean {
         return !path.endsWith(".yaml");
       }
@@ -382,11 +383,34 @@ export class Extension {
     }
   }
 
+  selectFilterEl(filterEl: FilePathFilter): void {
+    if (!filterEl.explorerFilterEl.classList.contains(styleClass.activeExplorer)) {
+      filterEl.explorerFilterEl.classList.add(styleClass.activeExplorer)
+    }
+  }
+
+  deselectFilterEl(filterEl: FilePathFilter): void {
+    if (filterEl.explorerFilterEl.classList.contains(styleClass.activeExplorer)) {
+      filterEl.explorerFilterEl.classList.remove(styleClass.activeExplorer)
+    }
+  }
+
+  isFilterSelected(name: string): boolean {
+    return this._selectedFilters.has(name)
+  }
+
   isFileSelected(path: string): boolean {
     return this._selectedFilePaths.has(path)
   }
 
   updateActiveFileElements(): void {
+    this._filters.forEach((el, idx) => {
+      if (this.isFilterSelected(el.name)) {
+        this.selectFilterEl(el)
+      } else {
+        this.deselectFilterEl(el)
+      }
+    })
     this._mappedFileEls.forEach( (el, idx) => {
       if (this.isFileSelected(el.path)) {
         this.selectFileEl(el)
